@@ -7,9 +7,10 @@ from langchain.chains import ConversationalRetrievalChain
 from langchain.memory import ConversationBufferMemory
 from langchain_community.chat_models import ChatOpenAI
 
-def process_pdf(file_path):
+def process_pdf(file_path, progress=gr.Progress()):
     """Process PDF with fallback strategies"""
     try:
+        progress(0, desc="Processing PDF...")
         # Try different loaders with fallback
         try:
             loader = PyPDFLoader(file_path)
@@ -18,9 +19,12 @@ def process_pdf(file_path):
             loader = UnstructuredPDFLoader(file_path, strategy="ocr_only")
             documents = loader.load()
         
+        progress(0.5, desc="Creating embeddings...")
         # Create embeddings and vector store
         embeddings = HuggingFaceEmbeddings(model_name="all-MiniLM-L6-v2")
-        return Chroma.from_documents(documents, embeddings)
+        vector_store = Chroma.from_documents(documents, embeddings)
+        progress(1, desc="Done!")
+        return vector_store
     except Exception as e:
         raise gr.Error(f"Error processing PDF: {str(e)}")
 
@@ -42,10 +46,10 @@ def setup_conversation_chain(vector_store, api_key):
 
 def upload_file(file, api_key, chat_history):
     """Handle PDF upload and initialization"""
-    if not api_key.startswith("sk-"):
+    if not api_key or not api_key.startswith("sk-"):
         raise gr.Error("Invalid OpenAI API key format")
     
-    if not file.name.endswith('.pdf'):
+    if file is None or not file.name.endswith('.pdf'):
         raise gr.Error("Only PDF files are supported")
     
     vector_store = process_pdf(file.name)
@@ -67,8 +71,9 @@ def respond(query, chat_history, conversation_chain):
     except Exception as e:
         raise gr.Error(f"Error processing query: {str(e)}")
 
-with gr.Blocks(title="PDF Chatbot", theme=gr.themes.Soft()) as app:
+with gr.Blocks(title="📄 DocuBuddy - PDF Chatbot", theme=gr.themes.Soft()) as app:
     gr.Markdown("# 📄 DocuBuddy - Ask Me Questions About Your Document")
+    gr.Markdown("Upload a PDF and ask questions about its content. Get instant answers from your document.")
     
     # State variables
     conversation_chain = gr.State(None)
@@ -88,7 +93,9 @@ with gr.Blocks(title="PDF Chatbot", theme=gr.themes.Soft()) as app:
     
     chatbot = gr.Chatbot(label="Conversation", height=500)
     query = gr.Textbox(label="Your Question", placeholder="Type your question here...")
-    clear_btn = gr.ClearButton([query, chatbot])
+    with gr.Row():
+        submit_btn = gr.Button("Submit")
+        clear_btn = gr.ClearButton([query, chatbot])
     
     # Event handlers
     upload_btn.upload(
@@ -98,6 +105,12 @@ with gr.Blocks(title="PDF Chatbot", theme=gr.themes.Soft()) as app:
     )
     
     query.submit(
+        respond,
+        [query, chatbot, conversation_chain],
+        [query, chatbot]
+    )
+    
+    submit_btn.click(
         respond,
         [query, chatbot, conversation_chain],
         [query, chatbot]
