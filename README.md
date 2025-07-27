@@ -79,6 +79,7 @@ Hugging Face will automatically deploy your application. You can access it at `h
 2.  **Upload a PDF**: Click the "Upload PDF" button and select a PDF file from your computer.
 3.  **Ask Questions**: Once the PDF is processed, you can start asking questions in the chat interface.
 
+**HF Link** : https://huggingface.co/spaces/sachan7783/DocuBuddy
 ## Dependencies
 
 - `gradio`
