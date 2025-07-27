@@ -16,7 +16,7 @@ Follow these steps to run DocuBuddy on your local machine:
 ### 1. Clone the Repository
 
 ```bash
-git clone https://github.com/your-username/DocuBuddy.git
+git clone https://github.com/shivam303/pdf_buddy.git
 cd DocuBuddy
 ```
 
